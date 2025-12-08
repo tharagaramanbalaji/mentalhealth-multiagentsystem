@@ -1,26 +1,38 @@
 import os
 import streamlit as st
-from langchain.memory import ConversationBufferMemory
-from langchain.chains import ConversationChain
-from langchain_google_genai import ChatGoogleGenerativeAI
+from dotenv import load_dotenv
+from agents.therapist import get_therapist_chain
+from agents.mindfulness import get_mindfulness_chain
+from agents.knowledge import get_knowledge_chain
+from agents.journal import get_journal_chain
+from router import route_user_input
+load_dotenv()
 
-# Set your Gemini API key
-os.environ["GOOGLE_API_KEY"] = "AIzaSyAO_E7vq9JDwZDcEoHRX2zGx0yREasuhJ4"  # Replace this
+api_key = os.getenv("GOOGLE_API_KEY")
 
-# Streamlit app setup
-st.set_page_config(page_title="Mental Health AI Agent", layout="centered")
-st.title("🧠 Mental Health AI Companion")
-st.write("Feel free to talk, and I’ll listen. You’re not alone. 💬")
+# If a key is found, set it for LangChain to use. Otherwise, show an error.
+if api_key:
+    os.environ["GOOGLE_API_KEY"] = api_key
+else:
+    st.error("GOOGLE_API_KEY not found. Please create a .env file and add your API key to it.")
+    st.stop()
 
-# Setup memory + chat agent
-if "memory" not in st.session_state:
-    st.session_state.memory = ConversationBufferMemory()
-    st.session_state.chat = ConversationChain(
-        llm=ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.7),
-        memory=st.session_state.memory
-    )
 
-# Initialize messages in session state if not present
+# Streamlit page config
+st.set_page_config(page_title="Multi Agent Mental Health Assistant", layout="centered")
+st.title("Multi Agent Mental Health Assistant")
+st.write("Talk your thoughts out")
+
+# Initialize agents
+if "agents" not in st.session_state:
+    st.session_state.agents = {
+        "therapist": get_therapist_chain(),
+        "mindfulness": get_mindfulness_chain(),
+        "knowledge": get_knowledge_chain(),
+        "journal": get_journal_chain()
+    }
+
+# Initialize messages
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -32,14 +44,27 @@ for msg in st.session_state.messages:
         st.markdown(msg["ai"])
 
 # Input box
-user_input = st.chat_input("Drop your text here")
+user_input = st.chat_input("How can I help you today?")
 if user_input:
     with st.chat_message("user"):
         st.markdown(user_input)
-
-    response = st.session_state.chat.run(user_input)
+    
+    with st.status("Selecting the right agent for you...", expanded=False) as status:
+        # Let the AI decide which agent to use
+        agent_key = route_user_input(user_input)
+        status.update(label=f"Using {agent_key.title()} agent to respond...", state="running")
+        
+        # Get response from the chosen agent
+        agent = st.session_state.agents[agent_key]
+        response = agent.run(user_input)
+        
+        status.update(label=f"Response from {agent_key.title()} agent ready!", state="complete")
+    
+    # Format the response with agent type
+    formatted_response = f"**[{agent_key.title()} Agent]:** {response}"
+    
     with st.chat_message("assistant"):
-        st.markdown(response)
+        st.markdown(formatted_response)
 
-    # Save messages to session state
-    st.session_state.messages.append({"user": user_input, "ai": response})
+    # Save message
+    st.session_state.messages.append({"user": user_input, "ai": formatted_response})
