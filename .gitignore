@@ -1,33 +1,63 @@
-# Python
+# ── Python ──────────────────────────────────────────
 __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
 *.pyc
+*.pdb
 
-# Virtual environments
+# ── Virtual environments ─────────────────────────────
 venv/
+.venv/
+env/
 .env/
 .envrc
-.venv/
 
-# Streamlit
+# ── Environment / Secrets (NEVER commit these) ───────
+.env
+.env.*
+*.env
+!.env.example
+
+# ── Database files ───────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+mindbridge.db
+
+# ── Logs ─────────────────────────────────────────────
+*.log
+logs/
+
+# ── Streamlit (legacy) ───────────────────────────────
 .streamlit/
 
-# Jupyter Notebook
+# ── Jupyter ──────────────────────────────────────────
 .ipynb_checkpoints/
 
-# OS files
+# ── React / Node ─────────────────────────────────────
+frontend/node_modules/
+node_modules/
+frontend/dist/
+frontend/.vite/
+dist/
+.vite/
+*.local
+
+# ── npm / yarn ────────────────────────────────────────
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ── OS files ─────────────────────────────────────────
 .DS_Store
 Thumbs.db
-.streamlit/secrets.toml
+desktop.ini
 
-# Logs
-*.log
-
-# VS Code
+# ── Editors ──────────────────────────────────────────
 .vscode/
-
-# API keys and secrets
-*.env
-.env.*
+.idea/
+*.swp
+*.swo
+*~
