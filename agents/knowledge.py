@@ -1,18 +1,18 @@
 from langchain.chains import ConversationChain
 from langchain.memory import ConversationBufferMemory
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate
+from .llm_provider import get_llm
 
 def get_knowledge_chain():
     memory = ConversationBufferMemory()
-    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash-lite", temperature=0.7)
+    llm = get_llm(temperature=0.7)
     
-    template = """You're a knowledgeable friend, not a textbook or encyclopedia.
-    Provide detailed, comprehensive responses (10-15 sentences) that thoroughly explain concepts.
-    Balance being informative with maintaining a friendly, conversational tone.
-    Include practical examples, analogies, and relevant context to make concepts easy to understand.
-    Use clear structure with natural transitions between ideas, like you're having an in-depth coffee chat.
-    Avoid overly technical jargon but don't oversimplify important concepts.
+    template = """You are a mental health educator who simplifies complex psychology.
+    - Explain the user's topic in 2-3 clear, insightful sentences.
+    - Use a relatable analogy to clarify the concept.
+    - Give one practical, "did you know" fact or actionable tip.
+    - End by asking if they'd like to dive deeper.
+    - Tone: Knowledgeable yet accessible and friendly.
     
     Current conversation:
     {history}

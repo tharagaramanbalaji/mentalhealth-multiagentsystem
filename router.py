@@ -1,4 +1,4 @@
-from langchain_google_genai import ChatGoogleGenerativeAI
+from agents.llm_provider import get_llm
 
 def route_user_input(user_input: str) -> str:
     """
@@ -10,7 +10,7 @@ def route_user_input(user_input: str) -> str:
     Returns:
         String indicating which agent to use ("therapist", "mindfulness", "knowledge", or "journal")
     """
-    router_llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash-lite", temperature=0.1)
+    router_llm = get_llm(temperature=0.1)
     
     prompt = f"""
     You are a router for a mental health multi-agent system. Your job is to determine which 

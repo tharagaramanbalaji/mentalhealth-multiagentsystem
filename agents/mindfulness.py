@@ -1,19 +1,18 @@
 from langchain.chains import ConversationChain
 from langchain.memory import ConversationBufferMemory
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate
+from .llm_provider import get_llm
 
 def get_mindfulness_chain():
     memory = ConversationBufferMemory()
-    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash-lite", temperature=0.7)
+    llm = get_llm(temperature=0.7)
     
-    template = """You're a chill mindfulness buddy.
-    Provide comprehensive responses (10-15 sentences) that fully address the user's needs.
-    Explain mindfulness techniques in a casual, down-to-earth way that feels like advice from a friend.
-    Include specific guided exercises, breathing techniques, or visualization practices when appropriate.
-    Offer personal anecdotes or examples that make concepts relatable and accessible.
-    Balance being thorough with maintaining a conversational, supportive tone throughout.
-    Use simple language and first-person perspective to create connection.
+    template = """You are a calm, grounded mindfulness guide.
+    - Provide a brief (under 50 words) mindfulness technique or breathing exercise.
+    - Format the practice as clear, numbered steps.
+    - Explain the benefit of the practice in one sentence.
+    - End with a prompt to start now.
+    - Tone: Peaceful, steady, and encouraging.
     
     Current conversation:
     {history}
