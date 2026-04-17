@@ -605,7 +605,7 @@ function SessionCard({ step, results, onNext, onCancel }) {
 
     return (
       <div className="session-card">
-        <h3>Step 7: Your Action Plan</h3>
+        <h3>Step 6: Your Action Plan</h3>
         <p style={{ textAlign: 'center', marginBottom: '20px' }}>Small, meaningful steps for the next 24 hours.</p>
         
         {fetching ? (
@@ -629,8 +629,9 @@ function SessionCard({ step, results, onNext, onCancel }) {
           className="reframe-btn primary" 
           onClick={() => onNext({ type: 'actionplan', data: { actions: localActions } })}
           style={{ width: '100%', marginTop: '20px' }}
+          disabled={fetching || localActions.length === 0}
         >
-          Finalize Plan
+          {fetching ? 'Generating...' : 'Finalize Plan'}
         </button>
       </div>
     )
@@ -660,9 +661,13 @@ function SessionCard({ step, results, onNext, onCancel }) {
           <div className="summary-item">
             <div className="summary-label">Next Steps</div>
             <div className="summary-content">
-              <ul style={{ paddingLeft: '20px', margin: '5px 0' }}>
-                {results.actions?.map((a, i) => <li key={i}>{a}</li>)}
-              </ul>
+              {results.actions && results.actions.length > 0 ? (
+                <ul style={{ paddingLeft: '20px', margin: '5px 0' }}>
+                  {results.actions.map((a, i) => <li key={i}>{a}</li>)}
+                </ul>
+              ) : (
+                <p style={{ fontStyle: 'italic', opacity: 0.7 }}>No specific actions drafted for this session.</p>
+              )}
             </div>
           </div>
         </div>
@@ -918,56 +923,78 @@ export default function App() {
     setSessionActive(false) // Hide the card while loading AI response
     
     try {
+      let resData = {}
+      
       const endpointMap = {
         'checkin': 'http://localhost:8000/api/session/checkin',
         'problem': 'http://localhost:8000/api/session/problem-identification',
         'cbt': 'http://localhost:8000/api/session/thought-breakdown'
       }
-      
-      const res = await fetch(endpointMap[type], {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      })
 
-      if (!res.ok) throw new Error('Failed to analyze session step')
-      
-      const resData = await res.json()
-      
-      // Store relevant data for subsequent steps
-      if (type === 'checkin') {
-        setSessionResults(prev => ({ ...prev, ...resData.data }))
-      } else if (type === 'problem') {
-        setSessionResults(prev => ({ ...prev, ...resData.data }))
-      } else if (type === 'cbt') {
-        // Step 3 (CBT) provides distortion info; we also preserve the original thought for reframing
-        setSessionResults(prev => ({ 
-          ...prev, 
-          ...resData.data, 
-          negative_thought: data.thought 
-        }))
-      } else if (type === 'reframe') {
-        setSessionResults(prev => ({ ...prev, reframe: data.reframe }))
-      } else if (type === 'actionplan') {
-        setSessionResults(prev => ({ ...prev, actions: data.actions }))
+      // 1. Handle steps that require a backend fetch
+      if (endpointMap[type]) {
+        const res = await fetch(endpointMap[type], {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        })
+
+        if (!res.ok) throw new Error('Failed to analyze session step')
+        resData = await res.json()
+        
+        // Store relevant data for subsequent steps
+        if (type === 'checkin') {
+          setSessionResults(prev => ({ ...prev, ...resData.data }))
+        } else if (type === 'problem') {
+          setSessionResults(prev => ({ ...prev, ...resData.data }))
+        } else if (type === 'cbt') {
+          setSessionResults(prev => ({ 
+            ...prev, 
+            ...resData.data, 
+            negative_thought: data.thought 
+          }))
+        }
+      } 
+      // 2. Handle steps that were already processed locally or in the card
+      else {
+        if (type === 'reframe') {
+          setSessionResults(prev => ({ ...prev, reframe: data.reframe }))
+          resData = { 
+            reply: "That's a much more balanced way to look at it. Let's take a moment to regulate your emotions before we wrap up.",
+            type: 'text'
+          }
+        } else if (type === 'regulation') {
+          resData = {
+            reply: "I hope that helped you feel a bit more grounded. Now, let's create a small action plan for the next 24 hours.",
+            type: 'text'
+          }
+        } else if (type === 'actionplan') {
+          setSessionResults(prev => ({ ...prev, actions: data.actions }))
+          resData = {
+            reply: "Your plan is ready. You've done some incredible work today. Here is your session summary.",
+            type: 'text'
+          }
+        }
       }
 
-      if (autoRead) {
+      if (autoRead && resData.reply) {
         handleSpeak(resData.reply, resData.id || now())
       }
       
-      setMessages(prev => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: resData.reply,
-          data: resData.data,
-          format: resData.type,
-          agent: 'therapist',
-          time: now(),
-          id: resData.id || now(),
-        }
-      ])
+      if (resData.reply || resData.data) {
+        setMessages(prev => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: resData.reply || "",
+            data: resData.data,
+            format: resData.type,
+            agent: 'therapist',
+            time: now(),
+            id: resData.id || now(),
+          }
+        ])
+      }
 
       // Sequential navigation
       setTimeout(() => {
